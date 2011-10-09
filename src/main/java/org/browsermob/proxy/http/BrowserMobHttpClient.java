@@ -3,6 +3,7 @@ package org.browsermob.proxy.http;
 import cz.mallat.uasparser.CachingOnlineUpdateUASparser;
 import cz.mallat.uasparser.UASparser;
 import cz.mallat.uasparser.UserAgentInfo;
+import org.apache.commons.codec.binary.Base64InputStream;
 import org.apache.http.*;
 import org.apache.http.auth.*;
 import org.apache.http.client.CredentialsProvider;
@@ -22,6 +23,7 @@ import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.cookie.*;
+import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.impl.auth.BasicScheme;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
@@ -46,6 +48,7 @@ import org.xbill.DNS.DClass;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -526,6 +529,7 @@ public class BrowserMobHttpClient {
                 });
             } else {
                 response = httpClient.execute(method, ctx);
+                
                 statusLine = response.getStatusLine();
                 statusCode = statusLine.getStatusCode();
 
@@ -535,6 +539,7 @@ public class BrowserMobHttpClient {
                 }
 
                 if (response.getEntity() != null) {
+                	response.setEntity(new BufferedHttpEntity(response.getEntity()));
                     is = response.getEntity().getContent();
                 }
 
@@ -611,6 +616,8 @@ public class BrowserMobHttpClient {
                 }
             }
         }
+        
+
 
         /* TODO
         if (captureContent) {
@@ -692,6 +699,52 @@ public class BrowserMobHttpClient {
 
         if (contentType != null) {
             entry.getResponse().getContent().setMimeType(contentType);
+        }
+        
+        if (captureContent && null != response && null != response.getEntity()) {
+        	try {
+				
+				if (entry.getResponse().getContent().getMimeType().startsWith("text/"))
+				{
+					System.out.println("Storing some text in har log");
+
+					final char[] buffer = new char[0x10000];
+					StringBuilder out = new StringBuilder();
+					Reader in = new InputStreamReader(response.getEntity().getContent(), charSet);
+					int read;
+					do {
+					  read = in.read(buffer, 0, buffer.length);
+					  if (read>0) {
+					    out.append(buffer, 0, read);
+					  }
+					} while (read>=0);
+					
+					entry.getResponse().getContent().setText(out.toString());
+				}
+				else
+				{
+					System.out.println("Encoding " + entry.getResponse().getContent().getMimeType() + " as base64 for har log");
+					final char[] buffer = new char[0x10000];
+					StringBuilder out = new StringBuilder();
+					System.out.println(response.getEntity().getContent());
+					Base64InputStream base64 = new Base64InputStream(response.getEntity().getContent(), true);
+					
+					Reader in = new InputStreamReader(base64, "US-ASCII");
+					int read;
+					do {
+					  read = in.read(buffer, 0, buffer.length);
+					  if (read>0) {
+					    out.append(buffer, 0, read);
+					  }
+					} while (read>=0);
+					entry.getResponse().getContent().setEncoding("base64");
+					entry.getResponse().getContent().setText(out.toString());
+				}
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
         }
 
         // checking to see if the client is being redirected
