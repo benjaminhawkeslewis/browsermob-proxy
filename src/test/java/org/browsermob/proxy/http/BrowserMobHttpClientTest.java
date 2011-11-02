@@ -68,7 +68,6 @@ public class BrowserMobHttpClientTest {
 	 * Jetty Handler returning 1x1 GIF to all requests.
 	 * 
 	 * @author Benjamin Hawkes-Lewis <contact@benjaminhawkeslewis.com>
-	 *
 	 */
 	public static class PixelHandler extends AbstractHandler
 	{
@@ -90,6 +89,8 @@ public class BrowserMobHttpClientTest {
 	 * @throws IOException
 	 * @throws InterruptedException 
 	 * @see http://chaoticjava.com/posts/retrieving-a-free-port-for-socket-binding/
+	 * @author Benjamin Hawkes-Lewis <contact@benjaminhawkeslewis.com>
+	 * @return A free port
 	 */
 	public static int getFreePort()
             throws IOException, InterruptedException {
@@ -114,6 +115,8 @@ public class BrowserMobHttpClientTest {
 	 */
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
+		// Rather than hardcoding a port, we get a free port and use that.
+		// This supports parallelization of tests.
 		port = getFreePort();
 		server = new Server(port);
 		ContextHandlerCollection contexts = new ContextHandlerCollection();
@@ -190,6 +193,7 @@ public class BrowserMobHttpClientTest {
 		client.setCaptureContent(true);
 		BrowserMobHttpRequest request = client.newGet("http://127.0.0.1:" + port + "/pixel");
 		BrowserMobHttpResponse response = client.execute(request);
+		
 		assertTrue("HAR entry's text field should be base64", Base64.isBase64(response.getEntry().getResponse().getContent().getText()));
 		assertTrue("HAR entry's text field should be a base64 encoding of the pixel", response.getEntry().getResponse().getContent().getText().equals("R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="));
 	}
