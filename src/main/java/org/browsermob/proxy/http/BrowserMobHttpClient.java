@@ -747,43 +747,36 @@ public class BrowserMobHttpClient {
         
         if (captureContent && null != response && null != response.getEntity()) {
         	try {
-				
-				if (entry.getResponse().getContent().getMimeType().startsWith("text/"))
+        		
+        		StringBuilder out = new StringBuilder();
+        		final char[] buffer = new char[0x10000];
+        		int read;
+        		InputStreamReader in;
+        		
+				if (isKnownNonBinaryMediaType(entry.getResponse().getContent().getMimeType()))
 				{
-					System.out.println("Storing some text in har log");
-
-					final char[] buffer = new char[0x10000];
-					StringBuilder out = new StringBuilder();
-					InputStreamReader in = new InputStreamReader(response.getEntity().getContent(), charSet);
-					int read;
-					do {
-					  read = in.read(buffer, 0, buffer.length);
-					  if (read>0) {
-					    out.append(buffer, 0, read);
-					  }
-					} while (read>=0);
-					
-					entry.getResponse().getContent().setText(out.toString());
+					// Store text of response in HAR log
+					in = new InputStreamReader(response.getEntity().getContent(), charSet);
 				}
 				else
 				{
-					System.out.println("Encoding " + entry.getResponse().getContent().getMimeType() + " as base64 for har log");
-					final char[] buffer = new char[0x10000];
-					StringBuilder out = new StringBuilder();
-					System.out.println(response.getEntity().getContent());
-					Base64InputStream base64 = new Base64InputStream(response.getEntity().getContent(), true);
+					// Encode binary input stream as base64.
+					// Do not include line separators.
+					// http://tools.ietf.org/html/rfc4648#section-3.1
 					
-					InputStreamReader in = new InputStreamReader(base64, "US-ASCII");
-					int read;
-					do {
-					  read = in.read(buffer, 0, buffer.length);
-					  if (read>0) {
-					    out.append(buffer, 0, read);
-					  }
-					} while (read>=0);
-					entry.getResponse().getContent().setEncoding("base64");
-					entry.getResponse().getContent().setText(out.toString());
+					Base64InputStream base64 = new Base64InputStream(response.getEntity().getContent(), true, 0, "".getBytes());
+					in = new InputStreamReader(base64, "US-ASCII"); // base64 uses a subset of US-ASCII characters
+					entry.getResponse().getContent().setEncoding("base64"); // RFC 4648
 				}
+				
+				do {
+					read = in.read(buffer, 0, buffer.length);
+					if (read>0) {
+						out.append(buffer, 0, read);
+					}
+				} while (read >= 0);
+				
+				entry.getResponse().getContent().setText(out.toString());
 				
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -1022,6 +1015,19 @@ public class BrowserMobHttpClient {
                 }
             }
         }
+    }
+    
+    private boolean isKnownNonBinaryMediaType(String mediaType)
+    {
+    	return mediaType.startsWith("text/")
+			|| mediaType.endsWith("+json")
+			|| mediaType.endsWith("+xml")
+			|| mediaType.equals("application/xml")
+			|| mediaType.equals("application/json")
+			|| mediaType.equals("application/javascript")
+			|| mediaType.equals("application/x-javascript")
+			|| mediaType.equals("application/ecmascript")
+			|| mediaType.equals("application/xml-dtd");
     }
         
     private HarCookie toHarCookie(Cookie c) {

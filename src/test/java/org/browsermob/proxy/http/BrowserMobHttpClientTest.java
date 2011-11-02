@@ -1,5 +1,7 @@
 package org.browsermob.proxy.http;
 
+import org.apache.commons.codec.binary.Base64;
+
 import static org.junit.Assert.*;
 
 import java.io.IOException;
@@ -16,9 +18,12 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 
 /**
  * BrowserMobHttpClient integration test
@@ -58,6 +63,27 @@ public class BrowserMobHttpClientTest {
 	}
 	
 	/**
+	 * Pixel handler
+	 * 
+	 * Jetty Handler returning 1x1 GIF to all requests.
+	 * 
+	 * @author Benjamin Hawkes-Lewis <contact@benjaminhawkeslewis.com>
+	 *
+	 */
+	public static class PixelHandler extends AbstractHandler
+	{
+	    public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) 
+	        throws IOException, ServletException
+	    {
+	        response.setContentType("image/gif");
+	        response.setStatus(HttpServletResponse.SC_OK);
+	        baseRequest.setHandled(true);
+	        response.getOutputStream().write(
+	        		Base64.decodeBase64("R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="));
+	    }
+	}
+	
+	/**
 	 * Return a free port
 	 * 
 	 * Hat tip:
@@ -90,7 +116,19 @@ public class BrowserMobHttpClientTest {
 	public static void setUpBeforeClass() throws Exception {
 		port = getFreePort();
 		server = new Server(port);
-		server.setHandler(new HelloHandler());
+		ContextHandlerCollection contexts = new ContextHandlerCollection();
+		
+		ContextHandler htmlContext = new ContextHandler();
+        htmlContext.setContextPath("/html");
+        htmlContext.setHandler(new HelloHandler());
+        
+        ContextHandler pixelContext = new ContextHandler();
+        pixelContext.setContextPath("/pixel");
+        pixelContext.setHandler(new PixelHandler());
+        
+        contexts.setHandlers(new Handler[] { htmlContext, pixelContext });
+        
+        server.setHandler(contexts);
 		server.start();
 	}
 
@@ -114,14 +152,14 @@ public class BrowserMobHttpClientTest {
 	@Test
 	public void canCreateGetRequest() {
 		BrowserMobHttpClient client = new BrowserMobHttpClient();
-		BrowserMobHttpRequest request = client.newGet("http://127.0.0.1:" + port + "/");
+		BrowserMobHttpRequest request = client.newGet("http://127.0.0.1:" + port + "/html");
 		assertNotNull(request);
 	}
 	
 	@Test
 	public void canExecuteGetRequest() {
 		BrowserMobHttpClient client = new BrowserMobHttpClient();
-		BrowserMobHttpRequest request = client.newGet("http://127.0.0.1:" + port + "/");
+		BrowserMobHttpRequest request = client.newGet("http://127.0.0.1:" + port + "/html");
 		BrowserMobHttpResponse response = client.execute(request);
 		assertNotNull(response);		
 	}
@@ -129,7 +167,7 @@ public class BrowserMobHttpClientTest {
 	@Test
 	public void defaultsToNotCapturingContentOnGet() {
 		BrowserMobHttpClient client = new BrowserMobHttpClient();
-		BrowserMobHttpRequest request = client.newGet("http://127.0.0.1:" + port + "/");
+		BrowserMobHttpRequest request = client.newGet("http://127.0.0.1:" + port + "/html");
 		BrowserMobHttpResponse response = client.execute(request);
 		
 		assertNull("HAR response content text should be null when not capturing", response.getEntry().getResponse().getContent().getText());
@@ -139,11 +177,21 @@ public class BrowserMobHttpClientTest {
 	public void canCaptureContentOnGet() {
 		BrowserMobHttpClient client = new BrowserMobHttpClient();
 		client.setCaptureContent(true);
-		BrowserMobHttpRequest request = client.newGet("http://127.0.0.1:" + port + "/");
+		BrowserMobHttpRequest request = client.newGet("http://127.0.0.1:" + port + "/html");
 		BrowserMobHttpResponse response = client.execute(request);
 		
 		assertTrue("For a text subtype response, response body text should be the same as the HAR entry's text field", response.getBody().equals(response.getEntry().getResponse().getContent().getText()));
 		assertTrue("HAR entry's text field should match HTML of response.", response.getEntry().getResponse().getContent().getText().equals("<h1>Hello World</h1>"));
+	}
+	
+	@Test
+	public void canCaptureBinaryContentOnGet() {
+		BrowserMobHttpClient client = new BrowserMobHttpClient();
+		client.setCaptureContent(true);
+		BrowserMobHttpRequest request = client.newGet("http://127.0.0.1:" + port + "/pixel");
+		BrowserMobHttpResponse response = client.execute(request);
+		assertTrue("HAR entry's text field should be base64", Base64.isBase64(response.getEntry().getResponse().getContent().getText()));
+		assertTrue("HAR entry's text field should be a base64 encoding of the pixel", response.getEntry().getResponse().getContent().getText().equals("R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="));
 	}
 
 }
