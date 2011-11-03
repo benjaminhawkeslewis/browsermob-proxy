@@ -160,3 +160,10 @@ If you just want to run tests as integration after build, you can run `mvn verif
 Eclipse users can generate Eclipse project files, and (where possible) attach sources and JavaDocs to libraries, with:
 
     [~]$ mvn eclipse:eclipse -DdownloadSources=true  -DdownloadJavadocs=true
+
+FAQ
+---
+
+### Why is the codebase full of entombed Jetty code?
+
+BrowserMob Proxy was originally developed around the time people were moving from Jetty 5 to Jetty 6, which shared a namespace but had incompatible APIs. People would create projects using BrowserMob Proxy and Jetty 6 and experience CLASSPATH hell. So the developers forked Jetty 5 into the org.browsermob.jetty namespace.
