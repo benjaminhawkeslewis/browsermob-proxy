@@ -75,11 +75,13 @@ Embedded Mode
 
 If you're using Java and Selenium, the easiest way to get started is to embed the project directly in your test. First, you'll need to make sure that all the dependencies are imported in to the project. You can find them in the *lib* directory. Or, if you're using Maven, you can add this to your pom:
 
+    ```xml
     <dependency>
         <groupId>org.browsermob</groupId>
         <artifactId>browsermob-proxy</artifactId>
         <version>2.0-SNAPSHOT</version>
     </dependency>
+    ```
 
 *TODO*: We haven't yet released the artifacts to Maven's central repository, but we are working on it. The above will work as soon as it's ready.
 
@@ -95,6 +97,7 @@ Using With Selenium
 
 You can use the REST API with Selenium however you want. But if you're writing your tests in Java and using Selenium 2, this is the easiest way to use it:
 
+    ```java
     // start the proxy
     ProxyServer server = new ProxyServer(4444);
     server.start();
@@ -117,7 +120,7 @@ You can use the REST API with Selenium however you want. But if you're writing y
 
     // get the HAR data
     Har har = server.getHar();
-
+    ```
 
 HTTP Request Manipulation
 -------------------
@@ -142,3 +145,18 @@ SSL Support
 While the proxy supports SSL, it requires that a Certificate Authority be installed in to the browser. This allows the browser to trust all the SSL traffic coming from the proxy, which will be proxied using a classic man-in-the-middle technique. IT IS CRITICAL THAT YOU NOT INSTALL THIS CERTIFICATE AUTHORITY ON A BROWSER THAT IS USED FOR ANYTHING OTHER THAN TESTING.
 
 If you're doing testing with Selenium, you'll want to make sure that the browser profile that gets set up by Selenium not only has the proxy configured, but also has the CA installed. Unfortuantely, there is no API for doing this in Selenium, so you'll have to solve it uniquely for each browser type. We hope to make this easier in upcoming releases.
+
+Building BrowserMob Proxy
+-------------------------
+
+Builds are managed with [Maven](http://maven.apache.org/).
+
+To build the project just run `mvn`. This will download dependencies into your Maven repository, compile BrowserMob Proxy, run unit tests using the [Surefire plugin](http://maven.apache.org/plugins/maven-surefire-plugin/), run integration tests using the [Failsafe plugin](http://maven.apache.org/plugins/maven-failsafe-plugin/), generate documentation, and pack JARs for the Proxy library, its sources, and its documentation — all inside the *target* directory.
+
+If you just want to run unit tests, you can run `mvn test`.
+
+If you just want to run tests as integration after build, you can run `mvn verify`.
+
+Eclipse users can generate Eclipse project files, and (where possible) attach sources and JavaDocs to libraries, with:
+
+    [~]$ mvn eclipse:eclipse -DdownloadSources=true  -DdownloadJavadocs=true
