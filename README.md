@@ -75,20 +75,22 @@ Embedded Mode
 
 If you're using Java and Selenium, the easiest way to get started is to embed the project directly in your test. First, you'll need to make sure that all the dependencies are imported in to the project. You can find them in the *lib* directory. Or, if you're using Maven, you can add this to your pom:
 
-    ```xml
-    <dependency>
-        <groupId>org.browsermob</groupId>
-        <artifactId>browsermob-proxy</artifactId>
-        <version>2.0-SNAPSHOT</version>
-    </dependency>
-    ```
+```xml
+<dependency>
+    <groupId>org.browsermob</groupId>
+    <artifactId>browsermob-proxy</artifactId>
+    <version>2.0-SNAPSHOT</version>
+</dependency>
+```
 
 *TODO*: We haven't yet released the artifacts to Maven's central repository, but we are working on it. The above will work as soon as it's ready.
 
 Once done, you can start a proxy using `org.browsermob.proxy.ProxyServer`:
 
-    ProxyServer server = new ProxyServer(9090);
-    server.start();
+```java
+ProxyServer server = new ProxyServer(9090);
+server.start();
+```
 
 This class supports every feature that the proxy supports. In fact, the REST API is a subset of the methods exposed here, so new features will show up here before they show up in the REST API. Consult the Javadocs for the full API.
 
@@ -97,43 +99,45 @@ Using With Selenium
 
 You can use the REST API with Selenium however you want. But if you're writing your tests in Java and using Selenium 2, this is the easiest way to use it:
 
-    ```java
-    // start the proxy
-    ProxyServer server = new ProxyServer(4444);
-    server.start();
+```java
+// start the proxy
+ProxyServer server = new ProxyServer(4444);
+server.start();
 
-    // get the Selenium proxy object
-    Proxy proxy = server.seleniumProxy();
+// get the Selenium proxy object
+Proxy proxy = server.seleniumProxy();
 
-    // configure it as a desired capability
-    DesiredCapabilities capabilities = new DesiredCapabilities();
-    capabilities.setCapability(CapabilityType.PROXY, proxy);
+// configure it as a desired capability
+DesiredCapabilities capabilities = new DesiredCapabilities();
+capabilities.setCapability(CapabilityType.PROXY, proxy);
 
-    // start the browser up
-    WebDriver driver = new FirefoxDriver(capabilities);
+// start the browser up
+WebDriver driver = new FirefoxDriver(capabilities);
 
-    // create a new HAR with the label "yahoo.com"
-    server.newHar("yahoo.com");
+// create a new HAR with the label "yahoo.com"
+server.newHar("yahoo.com");
 
-    // open yahoo.com
-    driver.get("http://yahoo.com");
+// open yahoo.com
+driver.get("http://yahoo.com");
 
-    // get the HAR data
-    Har har = server.getHar();
-    ```
+// get the HAR data
+Har har = server.getHar();
+```
 
 HTTP Request Manipulation
 -------------------
 
 While not yet available via the REST interface, you can manipulate the requests like so:
 
-    server.addRequestInterceptor(new HttpRequestInterceptor() {
-        @Override
-        public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
-            request.removeHeaders("User-Agent");
-            request.addHeader("User-Agent", "Bananabot/1.0");
-        }
-    });
+```java
+server.addRequestInterceptor(new HttpRequestInterceptor() {
+    @Override
+    public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
+        request.removeHeaders("User-Agent");
+        request.addHeader("User-Agent", "Bananabot/1.0");
+    }
+});
+```
 
 The interceptor is the type `org.apache.http.HttpRequestInterceptor`, which is part of the [Apache HTTP Client](http://hc.apache.org/httpcomponents-client-ga/) project. You can consult the API docs for the full set of options available to you in the interceptor.
 
