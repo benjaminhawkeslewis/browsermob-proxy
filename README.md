@@ -31,6 +31,11 @@ Once started, there won't be an actual proxy running until you create a new prox
     [~]$ curl -X POST http://localhost:9090/proxy
     {"port":9091}
 
+or optionally specify your own port:
+
+    [~]$ curl -X POST -d 'port=9099' http://localhost:9090/proxy
+    {"port":9099}
+
 Once that is done, a new proxy will be available on the port returned. All you have to do is point a browser to that proxy on that port and you should be able to browser the internet. The following additional APIs will then be available:
 
  - PUT /proxy/[port]/har - creates a new HAR attached to the proxy and returns the HAR content if there was a previous HAR. Supports the following parameters:
@@ -50,6 +55,10 @@ Once that is done, a new proxy will be available on the port returned. All you h
   - downstreamKbps - Sets the downstream kbps
   - upstreamKbps - Sets the upstream kbps
   - latency - Add the given latency to each HTTP request
+ - POST /proxy/[port]/headers - Set and override HTTP Request headers. For example setting a custom User-Agent.
+  - Payload data should be json encoded set of headers (not url-encoded)
+ - POST /proxy/[port]/hosts - Overrides normal DNS lookups and remaps the given hosts with the associated IP address
+  - Payload data should be json encoded set of name/value pairs (ex: {"example.com": "1.2.3.4"})
 
 For example, once you've started the proxy you can create a new HAR to start recording data like so:
 
@@ -83,8 +92,6 @@ If you're using Java and Selenium, the easiest way to get started is to embed th
 </dependency>
 ```
 
-*TODO*: We haven't yet released the artifacts to Maven's central repository, but we are working on it. The above will work as soon as it's ready.
-
 Once done, you can start a proxy using `org.browsermob.proxy.ProxyServer`:
 
 ```java
@@ -93,6 +100,22 @@ server.start();
 ```
 
 This class supports every feature that the proxy supports. In fact, the REST API is a subset of the methods exposed here, so new features will show up here before they show up in the REST API. Consult the Javadocs for the full API.
+
+If your project already defines a Selenium dependency then you may want to exclude the version that browsermob-proxy pulls in, like so:
+
+    <dependency>
+        <groupId>biz.neustar</groupId>
+        <artifactId>browsermob-proxy</artifactId>
+        <version>LATEST_VERSION (ex: 2.0-beta-6)</version>
+        <scope>test</scope>
+        <exclusions>
+            <exclusion>
+                <groupId>org.seleniumhq.selenium</groupId>
+                <artifactId>selenium-api</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
 
 Using With Selenium
 -------------------
@@ -165,9 +188,16 @@ Eclipse users can generate Eclipse project files, and (where possible) attach so
 
     [~]$ mvn eclipse:eclipse -DdownloadSources=true  -DdownloadJavadocs=true
 
+NodeJS Support
+--------------
+
+NodeJS bindings for browswermob-proxy are available [here](https://github.com/zzo/browsermob-node).  Built-in support for [Selenium][http://seleniumhq.com] or use [CapserJS-on-PhantomJS](http://casperjs.org) or anything else to drive traffic for HAR generation.
+
 FAQ
 ---
 
 ### Why is the codebase full of entombed Jetty code?
 
 BrowserMob Proxy was originally developed around the time people were moving from Jetty 5 to Jetty 6, which shared a namespace but had incompatible APIs. People would create projects using BrowserMob Proxy and Jetty 6 and experience CLASSPATH hell. So the developers forked Jetty 5 into the org.browsermob.jetty namespace.
+
+

@@ -16,6 +16,7 @@ import org.browsermob.proxy.ProxyManager;
 import org.browsermob.proxy.ProxyServer;
 
 import java.util.Hashtable;
+import java.util.Map;
 
 @At("/proxy")
 @Service
@@ -36,9 +37,15 @@ public class ProxyResource {
             options.put("httpProxy", httpProxy);
         }
 
-        ProxyServer proxy = proxyManager.create(options);
-        int port = proxy.getPort();
-
+        String paramPort = request.param("port");
+        int port = 0;
+        if (paramPort != null) {
+            port = Integer.parseInt(paramPort);
+            ProxyServer proxy = proxyManager.create(options, port);
+        } else {
+            ProxyServer proxy = proxyManager.create(options);
+            port = proxy.getPort();
+        }
         return Reply.with(new ProxyDescriptor(port)).as(Json.class);
     }
 
@@ -102,6 +109,18 @@ public class ProxyResource {
         return Reply.saying().ok();
     }
 
+    @Post
+    @At("/:port/headers")
+    public Reply<?> updateHeaders(@Named("port") int port, Request request) {
+        ProxyServer proxy = proxyManager.get(port);
+        Map<String, String> headers = request.read(Map.class).as(Json.class);
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            proxy.addHeader(key, value);
+        }
+        return Reply.saying().ok();
+    }
 
     @Put
     @At("/:port/limit")
@@ -134,6 +153,24 @@ public class ProxyResource {
         proxyManager.delete(port);
         return Reply.saying().ok();
     }
+
+    @Post
+    @At("/:port/hosts")
+    public Reply<?> remapHosts(@Named("port") int port, Request request) {
+        ProxyServer proxy = proxyManager.get(port);
+        @SuppressWarnings("unchecked") Map<String, String> headers = request.read(Map.class).as(Json.class);
+
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            proxy.remapHost(key, value);
+            proxy.setDNSCacheTimeout(0);
+            proxy.clearDNSCache();
+        }
+
+        return Reply.saying().ok();
+    }
+
 
     private int parseResponseCode(String response)
     {
